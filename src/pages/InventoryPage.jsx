@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS } from "../constants/index.js";
 import { INVENTORY } from "../data/mockData.js";
 import { formatCurrency, formatNum } from "../utils/formatters.js";
@@ -10,7 +10,17 @@ import Modal from "../components/ui/Modal.jsx";
 import SearchBar from "../components/ui/SearchBar.jsx";
 
 export default function InventoryPage({ dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   
   // Main inventory state
   const [inventory, setInventory] = useState(INVENTORY);
@@ -169,7 +179,7 @@ export default function InventoryPage({ dark }) {
   return (
     <div>
       {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={s.grid(4)}>
         <StatCard icon="🥛" label="Total Stock" value={`${totalLiters} L`} color={COLORS.primary} dark={dark} />
         <StatCard icon="💰" label="Stock Value" value={formatCurrency(totalValue)} color={COLORS.accent} dark={dark} />
         <StatCard icon="🚨" label="Stock Alerts" value={alerts} delta={alerts > 0 ? "Needs attention" : "All good"} positive={alerts === 0} color={COLORS.danger} dark={dark} />

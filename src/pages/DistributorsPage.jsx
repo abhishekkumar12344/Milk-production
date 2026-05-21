@@ -32,7 +32,7 @@ export default function DistributorsPage({ dark }) {
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={s.grid(4)}>
         {[
           { icon: "👥", label: "Total Distributors", value: distributors.length, color: COLORS.primary },
           { icon: "✅", label: "Active", value: distributors.filter(d => d.status === "Active").length, color: COLORS.accent },

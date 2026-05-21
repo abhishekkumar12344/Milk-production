@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { COLORS } from "../constants/index.js";
 import { MILK_COLLECTIONS, PAYMENTS, MOCK_DISTRIBUTORS, MONTHLY_DATA, DAILY_DATA, NOTIFICATIONS, EXPENSE_PIE } from "../data/mockData.js";
@@ -9,7 +10,17 @@ import StatusBadge from "../components/ui/StatusBadge.jsx";
 import { PieChart, Pie, Cell } from "recharts";
 
 export default function Dashboard({ dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const todayTotal = MILK_COLLECTIONS.filter(m => m.date === "2025-01-15").reduce((a, b) => a + b.quantity, 0);
   const todayRevenue = MILK_COLLECTIONS.filter(m => m.date === "2025-01-15").reduce((a, b) => a + b.total, 0);
   const pendingAmt = PAYMENTS.filter(p => p.status === "Pending").reduce((a, b) => a + b.amount, 0);
@@ -28,15 +39,15 @@ export default function Dashboard({ dark }) {
   return (
     <div>
       {/* Stats Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={s.grid(4)}>
         {stats.map(stat => <StatCard key={stat.label} {...stat} dark={dark} />)}
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
         <div style={s.card}>
           <SectionHeader title="Monthly Collection & Revenue Trend" dark={dark} />
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={isMobile ? 180 : 240}>
             <AreaChart data={MONTHLY_DATA}>
               <defs>
                 <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
@@ -49,10 +60,10 @@ export default function Dashboard({ dark }) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? "#1e3a5f" : "#f1f5f9"} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: dark ? "#94a3b8" : "#64748b" }} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? "#94a3b8" : "#64748b" }} />
+              <XAxis dataKey="month" tick={{ fontSize: isMobile ? 9 : 11, fill: dark ? "#94a3b8" : "#64748b" }} />
+              <YAxis tick={{ fontSize: isMobile ? 9 : 11, fill: dark ? "#94a3b8" : "#64748b" }} />
               <Tooltip contentStyle={{ background: dark ? "#1e293b" : "white", border: "none", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: isMobile ? 10 : 12 }} />
               <Area type="monotone" dataKey="collected" name="Liters" stroke={COLORS.primary} fill="url(#g1)" strokeWidth={2.5} />
               <Area type="monotone" dataKey="profit" name="Profit(₹/100)" stroke={COLORS.accent} fill="url(#g2)" strokeWidth={2.5} />
             </AreaChart>
@@ -61,17 +72,17 @@ export default function Dashboard({ dark }) {
 
         <div style={s.card}>
           <SectionHeader title="Expense Breakdown" dark={dark} />
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={isMobile ? 180 : 240}>
             <PieChart>
-              <Pie data={EXPENSE_PIE} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
+              <Pie data={EXPENSE_PIE} cx="50%" cy="50%" innerRadius={isMobile ? 40 : 55} outerRadius={isMobile ? 60 : 85} paddingAngle={3} dataKey="value">
                 {EXPENSE_PIE.map((e) => <Cell key={e.name} fill={e.color} />)}
               </Pie>
               <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ background: dark ? "#1e293b" : "white", border: "none", borderRadius: 8 }} />
             </PieChart>
           </ResponsiveContainer>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
             {EXPENSE_PIE.map(e => (
-              <div key={e.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
+              <div key={e.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: isMobile ? 11 : 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color }} />
                   <span style={{ color: dark ? "#94a3b8" : "#64748b" }}>{e.name}</span>
@@ -84,14 +95,14 @@ export default function Dashboard({ dark }) {
       </div>
 
       {/* Daily + Notifications */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
         <div style={s.card}>
           <SectionHeader title="This Week's Collection (L)" dark={dark} />
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
             <BarChart data={DAILY_DATA} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? "#1e3a5f" : "#f1f5f9"} />
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: dark ? "#94a3b8" : "#64748b" }} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? "#94a3b8" : "#64748b" }} />
+              <XAxis dataKey="day" tick={{ fontSize: isMobile ? 9 : 11, fill: dark ? "#94a3b8" : "#64748b" }} />
+              <YAxis tick={{ fontSize: isMobile ? 9 : 11, fill: dark ? "#94a3b8" : "#64748b" }} />
               <Tooltip contentStyle={{ background: dark ? "#1e293b" : "white", border: "none", borderRadius: 8 }} />
               <Legend />
               <Bar dataKey="morning" name="Morning" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
@@ -102,15 +113,15 @@ export default function Dashboard({ dark }) {
 
         <div style={s.card}>
           <SectionHeader title="Notifications" dark={dark} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: isMobile ? "auto" : 240, overflowY: "auto" }}>
             {NOTIFICATIONS.slice(0, 4).map(n => {
               const colors = { warning: "#f59e0b", danger: "#ef4444", info: COLORS.primary, success: "#10b981" };
               return (
                 <div key={n.id} style={{ display: "flex", gap: 10, padding: "10px 12px", borderRadius: 10, background: n.read ? "transparent" : (colors[n.type] + "10"), border: `1px solid ${colors[n.type]}20` }}>
                   <span style={{ fontSize: 14 }}>{n.type === "warning" ? "⚠️" : n.type === "danger" ? "🚨" : n.type === "success" ? "✅" : "ℹ️"}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: dark ? "#e2e8f0" : "#334155", fontWeight: n.read ? 400 : 600 }}>{n.message}</div>
-                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{n.time}</div>
+                    <div style={{ fontSize: 11, color: dark ? "#e2e8f0" : "#334155", fontWeight: n.read ? 400 : 600 }}>{n.message}</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>{n.time}</div>
                   </div>
                   {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: colors[n.type], marginTop: 4 }} />}
                 </div>

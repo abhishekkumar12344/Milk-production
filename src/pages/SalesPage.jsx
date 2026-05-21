@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS } from "../constants/index.js";
 import { MILK_SALES, CLIENTS, INVENTORY } from "../data/mockData.js";
 import { formatCurrency } from "../utils/formatters.js";
@@ -10,7 +10,17 @@ import SearchBar from "../components/ui/SearchBar.jsx";
 import Modal from "../components/ui/Modal.jsx";
 
 export default function SalesPage({ dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const [sales, setSales] = useState(MILK_SALES);
   const [search, setSearch] = useState("");
   const [filterPayment, setFilterPayment] = useState("All");
@@ -76,7 +86,7 @@ export default function SalesPage({ dark }) {
   return (
     <div>
       {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={s.grid(4)}>
         <StatCard icon="💼" label="Total Sales" value={formatCurrency(totalSales)} color={COLORS.accent} dark={dark} />
         <StatCard icon="✅" label="Paid Amount" value={formatCurrency(totalPaid)} color={COLORS.accent} dark={dark} />
         <StatCard icon="⏳" label="Pending Amount" value={formatCurrency(totalPending)} delta={sales.filter(s => s.paymentStatus === "Pending").length + " invoices"} color={COLORS.warning} dark={dark} />

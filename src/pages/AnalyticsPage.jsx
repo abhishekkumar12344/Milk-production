@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { COLORS } from "../constants/index.js";
 import { MOCK_DISTRIBUTORS, MONTHLY_DATA, DAILY_DATA } from "../data/mockData.js";
@@ -6,7 +7,17 @@ import { getStyles } from "../styles/getStyles.js";
 import SectionHeader from "../components/ui/SectionHeader.jsx";
 
 export default function AnalyticsPage({ dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const distPerformance = MOCK_DISTRIBUTORS.filter(d => d.status === "Active").map(d => ({
     name: d.name.split(" ")[0], liters: d.totalLiters, amount: d.totalAmount,
   }));

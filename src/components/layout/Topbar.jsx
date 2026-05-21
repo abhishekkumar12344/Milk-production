@@ -4,8 +4,8 @@ import { COLORS } from "../../constants/index.js";
 // Re-export NOTIFICATIONS from data for convenience
 import { NOTIFICATIONS as NOTIF_DATA } from "../../data/mockData.js";
 
-export default function Topbar({ dark, toggleDark, activePage, user }) {
-  const s = getStyles(dark);
+export default function Topbar({ dark, toggleDark, activePage, user, isMobile, sidebarOpen, toggleSidebar }) {
+  const s = getStyles(dark, isMobile);
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = NOTIF_DATA.filter((n) => !n.read).length;
 
@@ -18,13 +18,29 @@ export default function Topbar({ dark, toggleDark, activePage, user }) {
     payments: "Payments",
     profit: "Profit & Loss",
     settings: "Settings",
+    clients: "Clients",
+    sales: "Sales",
+    production: "Production",
   };
 
   return (
     <div style={s.topbar}>
-      <div>
-        <div style={s.pageTitle}>{pageTitle[activePage]}</div>
-        <div style={{ fontSize: 12, color: "#94a3b8" }}>Tuesday, January 15, 2025</div>
+      <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 16 }}>
+        {isMobile && (
+          <button
+            onClick={toggleSidebar}
+            style={s.hamburger}
+            title="Toggle Menu"
+          >
+            <div style={{...s.hamburgerLine, transform: sidebarOpen ? 'rotate(45deg) translateY(11px)' : 'rotate(0)'}} />
+            <div style={{...s.hamburgerLine, opacity: sidebarOpen ? 0 : 1}} />
+            <div style={{...s.hamburgerLine, transform: sidebarOpen ? 'rotate(-45deg) translateY(-11px)' : 'rotate(0)'}} />
+          </button>
+        )}
+        <div>
+          <div style={s.pageTitle}>{pageTitle[activePage] || "Dashboard"}</div>
+          <div style={{ fontSize: isMobile ? 10 : 12, color: "#94a3b8" }}>Tuesday, January 15, 2025</div>
+        </div>
       </div>
 
       <div style={s.topbarRight}>

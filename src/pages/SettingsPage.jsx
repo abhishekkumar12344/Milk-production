@@ -1,10 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS } from "../constants/index.js";
 import { getStyles } from "../styles/getStyles.js";
 import SectionHeader from "../components/ui/SectionHeader.jsx";
 
 export default function SettingsPage({ dark, toggleDark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const [profile, setProfile] = useState({
     businessName: "Shri Ram Dairy",
     ownerName: "Mohan Lal",
@@ -15,11 +25,11 @@ export default function SettingsPage({ dark, toggleDark }) {
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         {/* Business Details */}
         <div style={{ ...s.card, gridColumn: "1 / -1" }}>
           <SectionHeader title="Business Details" dark={dark} />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
             {[["businessName", "Business Name"], ["ownerName", "Owner Name"], ["phone", "Phone"], ["email", "Email"]].map(([k, l]) => (
               <div key={k}>
                 <label style={s.label}>{l}</label>
@@ -65,7 +75,7 @@ export default function SettingsPage({ dark, toggleDark }) {
         {/* Export & Reports */}
         <div style={{ ...s.card, gridColumn: "1 / -1" }}>
           <SectionHeader title="Export & Reports" dark={dark} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: 12 }}>
             {[
               ["📄 Export Distributors", "PDF", COLORS.danger],
               ["📊 Export Collections", "Excel", COLORS.accent],

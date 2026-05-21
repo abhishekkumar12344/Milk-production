@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getStyles } from "./styles/getStyles.js";
 import Sidebar from "./components/layout/Sidebar.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
@@ -21,14 +21,32 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [activePage, setActivePage] = useState("dashboard");
   const [user, setUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
 
-  const s = getStyles(dark);
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const isDesktop = screenWidth >= 1024;
 
   const handleLogin = (form) => {
     setUser({ name: "Admin User", email: form.email, role: form.role });
     setPage("app");
+    setSidebarOpen(false);
   };
-  const handleLogout = () => { setUser(null); setPage("home"); };
+  const handleLogout = () => { setUser(null); setPage("home"); setSidebarOpen(false); };
+
+  // Close sidebar when page changes on mobile
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [activePage, isMobile]);
+
+  const s = getStyles(dark, isMobile, isTablet);
 
   if (page === "home") return <HomePage onLogin={() => setPage("login")} />;
   if (page === "login") return <LoginPage onLogin={handleLogin} dark={dark} />;
@@ -52,19 +70,53 @@ export default function App() {
 
   return (
     <div style={s.app}>
-      <Sidebar
-        dark={dark}
-        activePage={activePage}
-        setActivePage={setActivePage}
-        user={user}
-        onLogout={handleLogout}
-      />
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 98,
+            top: 64,
+          }}
+        />
+      )}
+
+      {/* Sidebar - hide on mobile by default */}
+      {!isMobile && (
+        <Sidebar
+          dark={dark}
+          activePage={activePage}
+          setActivePage={setActivePage}
+          user={user}
+          onLogout={handleLogout}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* Mobile Sidebar - show only when open */}
+      {isMobile && sidebarOpen && (
+        <Sidebar
+          dark={dark}
+          activePage={activePage}
+          setActivePage={setActivePage}
+          user={user}
+          onLogout={handleLogout}
+          isMobile={isMobile}
+        />
+      )}
+
       <div style={s.mainContent}>
         <Topbar
           dark={dark}
           toggleDark={() => setDark(d => !d)}
           activePage={activePage}
           user={user}
+          isMobile={isMobile}
+          sidebarOpen={sidebarOpen}
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
         <div style={s.pageContent}>
           {renderPage()}
@@ -72,11 +124,15 @@ export default function App() {
       </div>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; overflow-x: hidden; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         tr:hover td { background: ${dark ? "rgba(255,255,255,0.02)" : "rgba(26,86,219,0.02)"}; }
+        @media (max-width: 767px) {
+          * { font-size: 14px; }
+        }
       `}</style>
     </div>
   );

@@ -1,19 +1,29 @@
 import { getStyles } from "../../styles/getStyles.js";
 import { NAV_SECTIONS } from "../../constants/index.js";
 
-export default function Sidebar({ dark, activePage, setActivePage, user, onLogout }) {
-  const s = getStyles(dark);
+export default function Sidebar({ dark, activePage, setActivePage, user, onLogout, isMobile }) {
+  const s = getStyles(dark, isMobile);
   return (
     <div style={s.sidebar}>
-      <div style={s.sidebarBrand}>
-        <div style={s.sidebarLogo}>
-          <div style={s.logoIcon}>🥛</div>
-          <div>
-            <div style={s.logoText}>DairyFlow</div>
-            <div style={s.logoSub}>SMART DAIRY MGMT</div>
+      {isMobile && (
+        <div style={s.sidebarBrand}>
+          <div style={{ ...s.sidebarLogo, justifyContent: "center" }}>
+            <div style={s.logoIcon}>🥛</div>
           </div>
         </div>
-      </div>
+      )}
+      
+      {!isMobile && (
+        <div style={s.sidebarBrand}>
+          <div style={s.sidebarLogo}>
+            <div style={s.logoIcon}>🥛</div>
+            <div>
+              <div style={s.logoText}>DairyFlow</div>
+              <div style={s.logoSub}>SMART DAIRY MGMT</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={s.navSection}>
         {NAV_SECTIONS.map((section) => (

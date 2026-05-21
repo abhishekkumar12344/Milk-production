@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS } from "../constants/index.js";
 import { CLIENTS } from "../data/mockData.js";
 import { formatCurrency, formatNum } from "../utils/formatters.js";
@@ -10,7 +10,17 @@ import SearchBar from "../components/ui/SearchBar.jsx";
 import Modal from "../components/ui/Modal.jsx";
 
 export default function ClientsPage({ dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const [clients, setClients] = useState(CLIENTS);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("All");
@@ -80,7 +90,7 @@ export default function ClientsPage({ dark }) {
   return (
     <div>
       {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={s.grid(4)}>
         <StatCard icon="🏪" label="Total Clients" value={clients.length} color={COLORS.primary} dark={dark} />
         <StatCard icon="✅" label="Active" value={activeClients} delta={`${clients.length - activeClients} inactive`} positive={true} color={COLORS.accent} dark={dark} />
         <StatCard icon="💰" label="Outstanding Due" value={formatCurrency(totalOutstanding)} color={COLORS.warning} dark={dark} />

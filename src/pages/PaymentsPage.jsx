@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS } from "../constants/index.js";
 import { PAYMENTS, MOCK_DISTRIBUTORS } from "../data/mockData.js";
 import { formatCurrency } from "../utils/formatters.js";
@@ -9,7 +9,17 @@ import StatusBadge from "../components/ui/StatusBadge.jsx";
 import SearchBar from "../components/ui/SearchBar.jsx";
 
 export default function PaymentsPage({ dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const [payments, setPayments] = useState(PAYMENTS);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -25,7 +35,7 @@ export default function PaymentsPage({ dark }) {
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={s.grid(4)}>
         <StatCard icon="✅" label="Total Paid" value={formatCurrency(totalPaid)} color={COLORS.accent} dark={dark} />
         <StatCard icon="⏳" label="Total Pending" value={formatCurrency(totalPending)} color={COLORS.warning} dark={dark} />
         <StatCard icon="📊" label="Total Transactions" value={payments.length} color={COLORS.primary} dark={dark} />

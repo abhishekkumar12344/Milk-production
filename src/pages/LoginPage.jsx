@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS } from "../constants/index.js";
 import { getStyles } from "../styles/getStyles.js";
 
 export default function LoginPage({ onLogin, dark }) {
-  const s = getStyles(dark);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
+  const s = getStyles(dark, isMobile, isTablet);
   const [form, setForm] = useState({ email: "admin@dairy.com", password: "admin123", role: "Admin" });
   const [loading, setLoading] = useState(false);
 
@@ -13,12 +23,12 @@ export default function LoginPage({ onLogin, dark }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "white", borderRadius: 24, padding: 40, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ width: 56, height: 56, background: COLORS.primary, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>🥛</div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>Welcome to DairyFlow</h2>
-          <p style={{ color: "#64748b", fontSize: 14, margin: 0 }}>Sign in to your account</p>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 12 : 16 }}>
+      <div style={{ background: "white", borderRadius: 24, padding: isMobile ? 24 : 40, width: "100%", maxWidth: isMobile ? "95%" : 420, boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 32 }}>
+          <div style={{ width: isMobile ? 48 : 56, height: isMobile ? 48 : 56, background: COLORS.primary, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 24 : 28, margin: "0 auto 16px" }}>🥛</div>
+          <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>Welcome to DairyFlow</h2>
+          <p style={{ color: "#64748b", fontSize: isMobile ? 12 : 14, margin: 0 }}>Sign in to your account</p>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
