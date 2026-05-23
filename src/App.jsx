@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getStyles } from "./styles/getStyles.js";
+import { authAPI, getUserData } from "./utils/api.js";
 import Sidebar from "./components/layout/Sidebar.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
 import HomePage from "./pages/HomePage.jsx";
@@ -18,11 +19,32 @@ import ProductionPage from "./pages/ProductionPage.jsx";
 
 export default function App() {
   const [dark, setDark] = useState(false);
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState("login");
   const [activePage, setActivePage] = useState("dashboard");
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  const [loading, setLoading] = useState(true);
+
+  // Check for existing auth on mount
+  useEffect(() => {
+    const checkAuth = () => {
+      if (authAPI.isAuthenticated()) {
+        const userData = getUserData();
+        if (userData) {
+          setUser(userData);
+          setPage("app");
+        } else {
+          setPage("login");
+        }
+      } else {
+        setPage("login");
+      }
+      setLoading(false);
+    };
+    
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setScreenWidth(window.innerWidth);
@@ -34,12 +56,18 @@ export default function App() {
   const isTablet = screenWidth >= 768 && screenWidth < 1024;
   const isDesktop = screenWidth >= 1024;
 
-  const handleLogin = (form) => {
-    setUser({ name: "Admin User", email: form.email, role: form.role });
+  const handleLogin = (userData) => {
+    setUser(userData);
     setPage("app");
     setSidebarOpen(false);
   };
-  const handleLogout = () => { setUser(null); setPage("home"); setSidebarOpen(false); };
+
+  const handleLogout = () => {
+    authAPI.logout();
+    setUser(null);
+    setPage("login");
+    setSidebarOpen(false);
+  };
 
   // Close sidebar when page changes on mobile
   useEffect(() => {
@@ -47,6 +75,17 @@ export default function App() {
   }, [activePage, isMobile]);
 
   const s = getStyles(dark, isMobile, isTablet);
+
+  if (loading) {
+    return (
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%)" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🥛</div>
+          <p style={{ color: "#64748b", fontWeight: 600 }}>Loading DairyFlow...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (page === "home") return <HomePage onLogin={() => setPage("login")} />;
   if (page === "login") return <LoginPage onLogin={handleLogin} dark={dark} />;
