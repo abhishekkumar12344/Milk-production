@@ -1,20 +1,19 @@
 /**
- * API Utility - Centralized API calls with error handling
- * Base URL: http://localhost:5000/api
+ * API Utility — Production Level
+ * Centralized API calls with JWT auth, logout support, and error handling.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const getAuthToken = () => {
-  try { return JSON.parse(localStorage.getItem('authToken')); } catch { return null; }
-};
-const setAuthToken  = (t) => localStorage.setItem('authToken', JSON.stringify(t));
-const clearAuthToken= ()  => { localStorage.removeItem('authToken'); localStorage.removeItem('userData'); };
+// ─── Token / User storage ──────────────────────────────────────────────────────
+const getAuthToken   = () => { try { return JSON.parse(localStorage.getItem('authToken')); } catch { return null; } };
+const setAuthToken   = (t) => localStorage.setItem('authToken', JSON.stringify(t));
+const clearAuthToken = ()  => { localStorage.removeItem('authToken'); localStorage.removeItem('userData'); };
 
-export const getUserData  = () => { try { return JSON.parse(localStorage.getItem('userData')); } catch { return null; } };
-export const setUserData  = (d) => localStorage.setItem('userData', JSON.stringify(d));
+export const getUserData = () => { try { return JSON.parse(localStorage.getItem('userData')); } catch { return null; } };
+export const setUserData = (d) => localStorage.setItem('userData', JSON.stringify(d));
 
-// ─── Core fetch wrapper ───────────────────────────────────────────────────────
+// ─── Core fetch wrapper ────────────────────────────────────────────────────────
 export const apiCall = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -23,10 +22,11 @@ export const apiCall = async (endpoint, options = {}) => {
 
   const response = await fetch(url, { headers, ...options });
 
+  // Auto-logout on 401 (expired / blacklisted token)
   if (response.status === 401) {
     clearAuthToken();
     window.location.href = '/';
-    throw new Error('Session expired. Please login again.');
+    throw new Error('Session expired. Please log in again.');
   }
 
   if (!response.ok) {
@@ -34,18 +34,21 @@ export const apiCall = async (endpoint, options = {}) => {
     try { error = await response.json(); } catch { error = { message: `HTTP ${response.status}` }; }
     throw new Error(error.message || `HTTP ${response.status}`);
   }
+
   return response.json();
 };
 
 export const apiGet    = (ep, params = {}) => {
-  const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([,v]) => v !== '' && v !== null && v !== undefined))).toString();
+  const qs = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined))
+  ).toString();
   return apiCall(qs ? `${ep}?${qs}` : ep, { method: 'GET' });
 };
-export const apiPost   = (ep, data)     => apiCall(ep, { method: 'POST',   body: JSON.stringify(data) });
-export const apiPatch  = (ep, data)     => apiCall(ep, { method: 'PATCH',  body: JSON.stringify(data) });
-export const apiDelete = (ep)           => apiCall(ep, { method: 'DELETE' });
+export const apiPost   = (ep, data) => apiCall(ep, { method: 'POST',   body: JSON.stringify(data) });
+export const apiPatch  = (ep, data) => apiCall(ep, { method: 'PATCH',  body: JSON.stringify(data) });
+export const apiDelete = (ep)       => apiCall(ep, { method: 'DELETE' });
 
-// ─── Download PDF helper ──────────────────────────────────────────────────────
+// ─── PDF download helper ───────────────────────────────────────────────────────
 export const downloadPDF = async (endpoint, filename) => {
   const token = getAuthToken();
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -59,31 +62,54 @@ export const downloadPDF = async (endpoint, filename) => {
   URL.revokeObjectURL(url);
 };
 
-// ─── Auth ──────────────────────────────────────────────────────────────────────
+// ─── Auth API ──────────────────────────────────────────────────────────────────
 export const authAPI = {
+  /** Login — stores token + user on success */
   login: async (email, password) => {
     const result = await apiPost('/auth/login', { email, password });
-    if (result.success && result.data.token) {
+    if (result.success && result.data?.token) {
       setAuthToken(result.data.token);
       setUserData(result.data.user);
     }
     return result;
   },
-  logout:          ()  => clearAuthToken(),
-  isAuthenticated: ()  => !!getAuthToken(),
-  getMe:           ()  => apiGet('/auth/me'),
+
+  /** Register — creates account and stores token + user on success */
+  register: async (name, email, password, role = 'Staff') => {
+    const result = await apiPost('/auth/register', { name, email, password, role });
+    if (result.success && result.data?.token) {
+      setAuthToken(result.data.token);
+      setUserData(result.data.user);
+    }
+    return result;
+  },
+
+  /** Logout — calls server to blacklist token, then clears local storage */
+  logout: async () => {
+    try {
+      await apiPost('/auth/logout', {});
+    } catch {
+      // Even if server call fails, clear local session
+    } finally {
+      clearAuthToken();
+    }
+  },
+
+  isAuthenticated: () => !!getAuthToken(),
+  getMe:           () => apiGet('/auth/me'),
   changePassword:  (d) => apiPatch('/auth/change-password', d),
-  getUsers:        ()  => apiGet('/auth/users'),
+  getUsers:        () => apiGet('/auth/users'),
   createUser:      (d) => apiPost('/auth/users', d),
+  updateUser:      (id, d) => apiPatch(`/auth/users/${id}`, d),
 };
 
 // ─── Distributors ──────────────────────────────────────────────────────────────
 export const distributorAPI = {
-  getAll:   (p = {}) => apiGet('/distributors', p),
-  getById:  (id)     => apiGet(`/distributors/${id}`),
-  create:   (d)      => apiPost('/distributors', d),
-  update:   (id, d)  => apiPatch(`/distributors/${id}`, d),
-  delete:   (id)     => apiDelete(`/distributors/${id}`),
+  getAll:  (p = {}) => apiGet('/distributors', p),
+  getById: (id)     => apiGet(`/distributors/${id}`),
+  create:  (d)      => apiPost('/distributors', d),
+  update:  (id, d)  => apiPatch(`/distributors/${id}`, d),
+  delete:  (id)     => apiDelete(`/distributors/${id}`),
 };
 
 // ─── Milk Collections ──────────────────────────────────────────────────────────
@@ -96,10 +122,10 @@ export const milkCollectionAPI = {
 
 // ─── Payments ──────────────────────────────────────────────────────────────────
 export const paymentAPI = {
-  getAll:    (p = {})    => apiGet('/payments', p),
-  create:    (d)         => apiPost('/payments', d),
-  markPaid:  (id, d = {})=> apiPatch(`/payments/${id}/mark-paid`, d),
-  delete:    (id)        => apiDelete(`/payments/${id}`),
+  getAll:   (p = {})     => apiGet('/payments', p),
+  create:   (d)          => apiPost('/payments', d),
+  markPaid: (id, d = {}) => apiPatch(`/payments/${id}/mark-paid`, d),
+  delete:   (id)         => apiDelete(`/payments/${id}`),
   downloadReceipt: (id)  => downloadPDF(`/receipts/payment/${id}`, `payment-${id}.pdf`),
 };
 
@@ -122,12 +148,12 @@ export const inventoryAPI = {
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 export const clientAPI = {
-  getAll:       (p = {}) => apiGet('/clients', p),
-  getById:      (id)     => apiGet(`/clients/${id}`),
-  getCredit:    (id)     => apiGet(`/clients/${id}/credit`),
-  create:       (d)      => apiPost('/clients', d),
-  update:       (id, d)  => apiPatch(`/clients/${id}`, d),
-  delete:       (id)     => apiDelete(`/clients/${id}`),
+  getAll:    (p = {}) => apiGet('/clients', p),
+  getById:   (id)     => apiGet(`/clients/${id}`),
+  getCredit: (id)     => apiGet(`/clients/${id}/credit`),
+  create:    (d)      => apiPost('/clients', d),
+  update:    (id, d)  => apiPatch(`/clients/${id}`, d),
+  delete:    (id)     => apiDelete(`/clients/${id}`),
 };
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
@@ -154,18 +180,17 @@ export const productionAPI = {
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const analyticsAPI = {
-  dashboard:  ()        => apiGet('/analytics/dashboard'),
-  monthly:    ()        => apiGet('/analytics/monthly'),
-  daily:      ()        => apiGet('/analytics/daily'),
-  profitLoss: (p = {})  => apiGet('/analytics/profit-loss', p),
+  dashboard:  ()       => apiGet('/analytics/dashboard'),
+  monthly:    ()       => apiGet('/analytics/monthly'),
+  daily:      ()       => apiGet('/analytics/daily'),
+  profitLoss: (p = {}) => apiGet('/analytics/profit-loss', p),
 };
 
-// ─── Reports (PDF downloads) ──────────────────────────────────────────────────
+// ─── Reports ──────────────────────────────────────────────────────────────────
 export const reportsAPI = {
   downloadProfitLoss: (startDate, endDate) =>
     downloadPDF(`/reports/profit-loss?startDate=${startDate}&endDate=${endDate}`, 'profit-loss-report.pdf'),
-  downloadInventory: () =>
-    downloadPDF('/reports/inventory', 'inventory-report.pdf'),
+  downloadInventory: () => downloadPDF('/reports/inventory', 'inventory-report.pdf'),
   salesSummary: (p = {}) => apiGet('/reports/sales-summary', p),
 };
 
@@ -174,5 +199,5 @@ export const notificationAPI = {
   getAll: () => apiGet('/notifications'),
 };
 
-// ─── Backward-compat exports ──────────────────────────────────────────────────
+// Backward-compat exports
 export { getAuthToken, setAuthToken, clearAuthToken };

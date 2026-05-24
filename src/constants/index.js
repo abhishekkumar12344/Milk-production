@@ -17,6 +17,7 @@ export const NAV_SECTIONS = [
     items: [
       { id: "dashboard", icon: "🏠", label: "Dashboard" },
       { id: "analytics", icon: "📊", label: "Analytics" },
+      { id: "reports", icon: "📋", label: "Reports & Data" },
     ],
   },
   {
