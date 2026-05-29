@@ -40,7 +40,7 @@ export const NAV_SECTIONS = [
     label: "Finance",
     items: [
       { id: "payments", icon: "💳", label: "Payments" },
-      { id: "profit", icon: "📈", label: "Profit & Loss" },
+      // { id: "profit", icon: "📈", label: "Profit & Loss" },
     ],
   },
   {

@@ -891,61 +891,69 @@ function ProductionTab({ dark, startDate, endDate }) {
   if (loading) return <Spinner />;
   if (error) return <div style={{ padding: 24, color: COLORS.danger }}>⚠️ {error}</div>;
 
+  // Backend field names: process, inputQuantity, outputQuantity, date, batchId, status
   const filtered = data.filter((p) => {
-    const d = new Date(p.date || p.productionDate).toISOString().split("T")[0];
+    const d = p.date ? String(p.date).split("T")[0] : "";
     if (startDate && d < startDate) return false;
     if (endDate && d > endDate) return false;
     return true;
   });
 
-  const totalProduced = filtered.reduce((s, p) => s + (p.quantity || p.quantityProduced || 0), 0);
-  const totalInput = filtered.reduce((s, p) => s + (p.milkUsed || p.rawMilkUsed || 0), 0);
+  // Use correct backend field names: outputQuantity = produced, inputQuantity = milk used
+  const totalProduced = filtered.reduce((s, p) => s + (p.outputQuantity || 0), 0);
+  const totalInput    = filtered.reduce((s, p) => s + (p.inputQuantity  || 0), 0);
   const avgYield = totalInput > 0 ? ((totalProduced / totalInput) * 100).toFixed(1) : 0;
 
-  // Group by product
+  // Group by process type (correct field: p.process)
   const byProd = {};
   filtered.forEach((p) => {
-    const k = p.product || p.productType || "Unknown";
+    const k = p.process || "Unknown";
     if (!byProd[k]) byProd[k] = { name: k, qty: 0, count: 0 };
-    byProd[k].qty += p.quantity || p.quantityProduced || 0;
+    byProd[k].qty += p.outputQuantity || 0;
     byProd[k].count++;
   });
   const prodChart = Object.values(byProd);
 
   const csvCols = [
-    { label: "Date", accessor: (r) => fmtDate(r.date || r.productionDate) },
-    { label: "Product", accessor: (r) => r.product || r.productType || "-" },
-    { label: "Qty Produced", accessor: (r) => r.quantity || r.quantityProduced || 0 },
-    { label: "Milk Used (L)", accessor: (r) => r.milkUsed || r.rawMilkUsed || 0 },
-    { label: "Batch No", accessor: (r) => r.batchNo || r.batchNumber || "-" },
-    { label: "Status", key: "status" },
+    { label: "Date",          accessor: (r) => fmtDate(r.date) },
+    { label: "Process Type",  accessor: (r) => r.process   || "-" },
+    { label: "Input Qty",     accessor: (r) => r.inputQuantity  || 0 },
+    { label: "Input Unit",    accessor: (r) => r.inputUnit  || "-" },
+    { label: "Output Qty",    accessor: (r) => r.outputQuantity || 0 },
+    { label: "Output Unit",   accessor: (r) => r.outputUnit || "-" },
+    { label: "Loss %",        accessor: (r) => r.lossPercent || 0 },
+    { label: "Labor Cost",    accessor: (r) => r.laborCost  || 0 },
+    { label: "Energy Cost",   accessor: (r) => r.energyCost || 0 },
+    { label: "Total Cost",    accessor: (r) => r.totalCost  || 0 },
+    { label: "Batch ID",      accessor: (r) => r.batchId    || "-" },
+    { label: "Status",        key: "status" },
   ];
 
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14, marginBottom: 20 }}>
-        <StatCard icon="🏭" label="Total Produced" value={`${formatNum(totalProduced)} units`} color={COLORS.primary} dark={dark} />
-        <StatCard icon="🥛" label="Milk Used" value={`${formatNum(totalInput)} L`} color={COLORS.accent} dark={dark} />
-        <StatCard icon="📊" label="Avg Yield" value={`${avgYield}%`} color={COLORS.warning} dark={dark} />
-        <StatCard icon="📋" label="Batches" value={filtered.length} color={COLORS.purple} dark={dark} />
+        <StatCard icon="🏭" label="Total Output"   value={`${formatNum(totalProduced.toFixed(1))} units`} color={COLORS.primary} dark={dark} />
+        <StatCard icon="🥛" label="Total Input"    value={`${formatNum(totalInput.toFixed(1))} L`}        color={COLORS.accent}  dark={dark} />
+        <StatCard icon="📊" label="Avg Yield"      value={`${avgYield}%`}                                 color={COLORS.warning} dark={dark} />
+        <StatCard icon="📋" label="Batches"        value={filtered.length}                                color={COLORS.purple}  dark={dark} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <div style={s.card}>
-          <SectionHeader title="Production by Product" dark={dark} />
+          <SectionHeader title="Output by Process Type" dark={dark} />
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={prodChart}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? "#1e3a5f" : "#f1f5f9"} />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ background: dark ? "#1e293b" : "white", border: "none", borderRadius: 8 }} />
-              <Bar dataKey="qty" name="Qty Produced" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="qty" name="Output Qty" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div style={s.card}>
-          <SectionHeader title="Batch Count by Product" dark={dark} />
+          <SectionHeader title="Batch Count by Process" dark={dark} />
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={prodChart} cx="50%" cy="50%" outerRadius={85} dataKey="count" nameKey="name"
@@ -969,24 +977,38 @@ function ProductionTab({ dark, startDate, endDate }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Date", "Product", "Qty Produced", "Milk Used", "Batch No", "Status"].map((h) => (
+                {["Date", "Process Type", "Input Qty", "Output Qty", "Loss %", "Labor Cost", "Energy Cost", "Total Cost", "Batch ID", "Status"].map((h) => (
                   <th key={h} style={s.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>No production records</td></tr>
-              ) : filtered.map((p) => (
-                <tr key={p._id}>
-                  <td style={s.td}>{fmtDate(p.date || p.productionDate)}</td>
-                  <td style={{ ...s.td, fontWeight: 600 }}>{p.product || p.productType || "-"}</td>
-                  <td style={{ ...s.td, fontWeight: 700 }}>{p.quantity || p.quantityProduced || 0}</td>
-                  <td style={s.td}>{p.milkUsed || p.rawMilkUsed || 0} L</td>
-                  <td style={s.td}>{p.batchNo || p.batchNumber || "-"}</td>
-                  <td style={s.td}><span style={s.badge2(p.status === "Completed" ? COLORS.accent : COLORS.warning)}>{p.status || "N/A"}</span></td>
-                </tr>
-              ))}
+                <tr><td colSpan={10} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>No production records in selected range</td></tr>
+              ) : filtered.map((p) => {
+                const statusLower = (p.status || "").toLowerCase();
+                const statusColor = statusLower === "completed" ? COLORS.accent
+                  : statusLower === "in-progress" ? COLORS.warning
+                  : statusLower === "cancelled"   ? COLORS.danger
+                  : COLORS.primary;
+                const statusLabel = p.status
+                  ? p.status.charAt(0).toUpperCase() + p.status.slice(1)
+                  : "N/A";
+                return (
+                  <tr key={p._id}>
+                    <td style={s.td}>{fmtDate(p.date)}</td>
+                    <td style={{ ...s.td, fontWeight: 600 }}>{p.process || "-"}</td>
+                    <td style={{ ...s.td, fontWeight: 700, color: COLORS.primary }}>{(p.inputQuantity  || 0).toFixed(1)} {p.inputUnit  || "L"}</td>
+                    <td style={{ ...s.td, fontWeight: 700, color: COLORS.accent  }}>{(p.outputQuantity || 0).toFixed(1)} {p.outputUnit || "L"}</td>
+                    <td style={{ ...s.td, fontWeight: 600, color: COLORS.warning }}>{(p.lossPercent   || 0).toFixed(1)}%</td>
+                    <td style={s.td}>₹{(p.laborCost  || 0).toLocaleString("en-IN")}</td>
+                    <td style={s.td}>₹{(p.energyCost || 0).toLocaleString("en-IN")}</td>
+                    <td style={{ ...s.td, fontWeight: 700 }}>₹{(p.totalCost  || 0).toLocaleString("en-IN")}</td>
+                    <td style={{ ...s.td, fontSize: 11, color: "#94a3b8" }}>{p.batchId || "-"}</td>
+                    <td style={s.td}><span style={s.badge2(statusColor)}>{statusLabel}</span></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

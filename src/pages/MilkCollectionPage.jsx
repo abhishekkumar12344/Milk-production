@@ -22,6 +22,7 @@ export default function MilkCollectionPage({ dark }) {
     distributorId: "",
     date: new Date().toISOString().split("T")[0],
     shift: "Morning",
+    cowType: "Cow",
     quantity: "",
     fat: "",
   });
@@ -77,13 +78,14 @@ export default function MilkCollectionPage({ dark }) {
         distributorId: form.distributorId,
         date: form.date,
         shift: form.shift,
+        cowType: form.cowType,
         quantity: Number(form.quantity),
         fat: Number(form.fat),
         status: "Pending"
       });
 
       setCollections(prev => [result.data, ...prev]);
-      setForm({ distributorId: "", date: new Date().toISOString().split("T")[0], shift: "Morning", quantity: "", fat: "" });
+      setForm({ distributorId: "", date: new Date().toISOString().split("T")[0], shift: "Morning", cowType: "Cow", quantity: "", fat: "" });
       alert("✅ Collection added successfully!");
     } catch (err) {
       alert("❌ Error: " + err.message);
@@ -133,6 +135,17 @@ export default function MilkCollectionPage({ dark }) {
                   <option>Evening</option>
                 </select>
               </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label style={s.label}>Cow Type</label>
+                <select value={form.cowType} onChange={e => setForm({...form, cowType: e.target.value})} style={s.select} disabled={submitting}>
+                  <option value="Cow">🐄 Cow</option>
+                  <option value="Buffalo">🐃 Buffalo</option>
+                </select>
+              </div>
+              <div></div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -190,13 +203,14 @@ export default function MilkCollectionPage({ dark }) {
           <div style={{ overflowX: "auto" }}>
             <table style={s.table}>
               <thead>
-                <tr>{["Distributor", "Shift", "Qty (L)", "Fat %", "Rate/L", "Total", "Status"].map(h => <th key={h} style={s.th}>{h}</th>)}</tr>
+                <tr>{["Distributor", "Shift", "Cow Type", "Qty (L)", "Fat %", "Rate/L", "Total", "Status"].map(h => <th key={h} style={s.th}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {filtered.map(m => (
                   <tr key={m._id}>
                     <td style={{ ...s.td, fontWeight: 600 }}>{m.distributorName}</td>
                     <td style={s.td}><span style={s.chip(m.shift === "Morning" ? COLORS.warning : COLORS.purple)}>{m.shift === "Morning" ? "🌅" : "🌙"} {m.shift}</span></td>
+                    <td style={s.td}><span style={s.chip(m.cowType === "Cow" ? COLORS.accent : COLORS.purple)}>{m.cowType === "Cow" ? "🐄" : "🐃"} {m.cowType}</span></td>
                     <td style={{ ...s.td, fontWeight: 700, color: COLORS.primary }}>{m.quantity}</td>
                     <td style={s.td}>{m.fat}%</td>
                     <td style={s.td}>₹{m.pricePerLiter}</td>

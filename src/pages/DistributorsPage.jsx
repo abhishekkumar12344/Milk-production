@@ -18,7 +18,7 @@ export default function DistributorsPage({ dark }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", village: "", phone: "", address: "", aadhaar: "", bank: "", milkType: "Cow" });
+  const [form, setForm] = useState({ name: "", village: "", phone: "", address: "", aadhaar: "", bank: "", accountNumber: "", ifscCode: "", bankName: "", milkType: "Cow", joiningDate: "" });
 
   // Fetch distributors on mount
   useEffect(() => {
@@ -56,12 +56,12 @@ export default function DistributorsPage({ dark }) {
       const result = await distributorAPI.create({
         ...form,
         milkType: form.milkType,
-        joinDate: new Date().toISOString().split("T")[0],
+        joiningDate: form.joiningDate ? new Date(form.joiningDate).toISOString() : new Date().toISOString(),
       });
       
       setDistributors(prev => [result.data, ...prev]);
       setShowAdd(false);
-      setForm({ name: "", village: "", phone: "", address: "", aadhaar: "", bank: "", milkType: "Cow" });
+      setForm({ name: "", village: "", phone: "", address: "", aadhaar: "", bank: "", accountNumber: "", ifscCode: "", bankName: "", milkType: "Cow", joiningDate: "" });
       alert("✅ Distributor added successfully!");
     } catch (err) {
       alert("❌ Error adding distributor: " + err.message);
@@ -148,8 +148,8 @@ export default function DistributorsPage({ dark }) {
       {/* Add Modal */}
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add New Distributor" dark={dark}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {[["name", "Full Name"], ["village", "Village"], ["phone", "Phone Number"], ["address", "Address"], ["aadhaar", "Aadhaar / ID"], ["bank", "Bank Details"]].map(([k, l]) => (
-            <div key={k} style={{ gridColumn: k === "address" ? "1 / -1" : "auto" }}>
+          {[["name", "Full Name"], ["village", "Village"], ["phone", "Phone Number"], ["address", "Address"], ["aadhaar", "Aadhaar / ID"]].map(([k, l]) => (
+            <div key={k} style={{ gridColumn: k === "address" || k === "aadhaar" ? "1 / -1" : "auto" }}>
               <label style={s.label}>{l}</label>
               <input value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} style={s.input} placeholder={l} disabled={submitting} />
             </div>
@@ -159,6 +159,22 @@ export default function DistributorsPage({ dark }) {
             <select value={form.milkType} onChange={e => setForm({ ...form, milkType: e.target.value })} style={s.select} disabled={submitting}>
               <option>Cow</option><option>Buffalo</option>
             </select>
+          </div>
+          <div>
+            <label style={s.label}>Joining Date</label>
+            <input type="date" value={form.joiningDate} onChange={e => setForm({ ...form, joiningDate: e.target.value })} style={s.input} disabled={submitting} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={s.label}>Bank Name</label>
+            <input value={form.bankName} onChange={e => setForm({ ...form, bankName: e.target.value })} style={s.input} placeholder="e.g., State Bank of India" disabled={submitting} />
+          </div>
+          <div>
+            <label style={s.label}>Account Number</label>
+            <input value={form.accountNumber} onChange={e => setForm({ ...form, accountNumber: e.target.value })} style={s.input} placeholder="Account No" disabled={submitting} />
+          </div>
+          <div>
+            <label style={s.label}>IFSC Code</label>
+            <input value={form.ifscCode} onChange={e => setForm({ ...form, ifscCode: e.target.value })} style={s.input} placeholder="IFSC Code" disabled={submitting} />
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
@@ -180,7 +196,7 @@ export default function DistributorsPage({ dark }) {
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-              {[["Address", selected.address || "N/A"], ["Aadhaar", selected.aadhaar || "N/A"], ["Bank", selected.bank || "N/A"], ["Milk Type", selected.milkType], ["Join Date", selected.joinDate?.substring(0, 10) || "N/A"], ["Total Liters", `${formatNum(selected.totalLiters || 0)} L`], ["Total Amount", formatCurrency(selected.totalAmount || 0)], ["Avg/Month", `${Math.round((selected.totalLiters || 0) / 12)} L`]].map(([k, v]) => (
+              {[["Address", selected.address || "N/A"], ["Aadhaar", selected.aadhaar || "N/A"], ["Bank Name", selected.bankName || "N/A"], ["Account Number", selected.accountNumber || "N/A"], ["IFSC Code", selected.ifscCode || "N/A"], ["Milk Type", selected.milkType], ["Join Date", selected.joinDate?.substring(0, 10) || selected.joiningDate?.substring(0, 10) || "N/A"], ["Total Liters", `${formatNum(selected.totalLiters || 0)} L`], ["Total Amount", formatCurrency(selected.totalAmount || 0)], ["Avg/Month", `${Math.round((selected.totalLiters || 0) / 12)} L`]].map(([k, v]) => (
                 <div key={k} style={{ padding: "10px 14px", background: dark ? "rgba(255,255,255,0.04)" : "#f8fafc", borderRadius: 10 }}>
                   <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" }}>{k}</div>
                   <div style={{ fontSize: 14, fontWeight: 600, marginTop: 3 }}>{v}</div>

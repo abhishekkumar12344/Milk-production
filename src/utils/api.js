@@ -198,6 +198,13 @@ export const reportsAPI = {
 export const notificationAPI = {
   getAll: () => apiGet('/notifications'),
 };
-
+// ─── Settings ─────────────────────────────────────────────────────────────────
+export const settingsAPI = {
+  getBusinessSettings: () => apiGet('/settings/business'),
+  updateBusinessSettings: (d) => apiPatch('/settings/business', d),
+  updateProductionLevel: (d) => apiPatch('/settings/production-level', d),
+  getUserProfile: () => apiGet('/settings/profile'),
+  changePassword: (d) => apiPatch('/settings/change-password', d),
+};
 // Backward-compat exports
 export { getAuthToken, setAuthToken, clearAuthToken };

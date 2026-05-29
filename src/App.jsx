@@ -3,12 +3,12 @@ import { getStyles } from "./styles/getStyles.js";
 import { authAPI, getUserData } from "./utils/api.js";
 import Sidebar from "./components/layout/Sidebar.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
+import HomePage from "./pages/HomePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import DistributorsPage from "./pages/DistributorsPage.jsx";
 import MilkCollectionPage from "./pages/MilkCollectionPage.jsx";
 import PaymentsPage from "./pages/PaymentsPage.jsx";
-import ProfitLossPage from "./pages/ProfitLossPage.jsx";
 import InventoryPage from "./pages/InventoryPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import ReportsAnalyticsPage from "./pages/ReportsAnalyticsPage.jsx";
@@ -19,6 +19,7 @@ import ProductionPage from "./pages/ProductionPage.jsx";
 
 export default function App() {
   const [dark, setDark] = useState(false);
+  // page: "loading" | "home" | "login" | "app"
   const [page, setPage] = useState("loading");
   const [activePage, setActivePage] = useState("dashboard");
   const [user, setUser] = useState(null);
@@ -26,30 +27,23 @@ export default function App() {
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Check for existing valid auth session on mount
+  // On mount: check existing session, else show home
   useEffect(() => {
-    const checkAuth = () => {
-      if (authAPI.isAuthenticated()) {
-        const userData = getUserData();
-        if (userData) {
-          setUser(userData);
-          setPage("app");
-          return;
-        }
-      }
-      setPage("login");
-    };
-    checkAuth();
+    if (authAPI.isAuthenticated()) {
+      const userData = getUserData();
+      if (userData) { setUser(userData); setPage("app"); return; }
+    }
+    setPage("home"); // show home landing before login
   }, []);
 
   useEffect(() => {
-    const handleResize = () => setScreenWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const h = () => setScreenWidth(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
   }, []);
 
-  const isMobile  = screenWidth < 768;
-  const isTablet  = screenWidth >= 768 && screenWidth < 1024;
+  const isMobile = screenWidth < 768;
+  const isTablet = screenWidth >= 768 && screenWidth < 1024;
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -58,21 +52,18 @@ export default function App() {
     setActivePage("dashboard");
   };
 
-  // Async logout — calls server to blacklist token
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    try {
-      await authAPI.logout();
-    } finally {
+    try { await authAPI.logout(); } catch (e) { /* ignore */ }
+    finally {
       setUser(null);
-      setPage("login");
+      setPage("home"); // go back to home after logout
       setSidebarOpen(false);
       setLoggingOut(false);
     }
   };
 
-  // Close sidebar when page changes on mobile
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [activePage, isMobile]);
@@ -82,24 +73,25 @@ export default function App() {
   // ── Loading splash ──
   if (page === "loading") {
     return (
-      <div style={{
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%)",
-      }}>
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%)" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>🥛</div>
+          <div style={{ fontSize: 52, marginBottom: 16, animation: "spin 2s linear infinite" }}>🥛</div>
           <p style={{ color: "#64748b", fontWeight: 700, fontSize: 15 }}>Loading DairyFlow…</p>
         </div>
+        <style>{'@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}'}</style>
       </div>
     );
   }
 
+  // ── Home landing ──
+  if (page === "home") {
+    return <HomePage onLogin={() => setPage("login")} />;
+  }
+
   // ── Login page ──
   if (page === "login") {
-    return <LoginPage onLogin={handleLogin} dark={dark} />;
+    return <LoginPage onLogin={handleLogin} dark={dark} onBack={() => setPage("home")} />;
   }
 
   // ── Main app ──
@@ -112,7 +104,6 @@ export default function App() {
       case "sales":        return <SalesPage dark={dark} />;
       case "production":   return <ProductionPage dark={dark} />;
       case "payments":     return <PaymentsPage dark={dark} />;
-      case "profit":       return <ProfitLossPage dark={dark} />;
       case "inventory":    return <InventoryPage dark={dark} />;
       case "analytics":    return <AnalyticsPage dark={dark} />;
       case "reports":      return <ReportsAnalyticsPage dark={dark} />;
@@ -123,50 +114,21 @@ export default function App() {
 
   return (
     <div style={s.app}>
-      {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 98,
-            top: 64,
-          }}
-        />
+        <div onClick={() => setSidebarOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 98, top: 64 }} />
       )}
-
-      {/* Sidebar — desktop always visible, mobile only when open */}
       {(!isMobile || sidebarOpen) && (
-        <Sidebar
-          dark={dark}
-          activePage={activePage}
-          setActivePage={setActivePage}
-          user={user}
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
-          isMobile={isMobile}
-        />
+        <Sidebar dark={dark} activePage={activePage} setActivePage={setActivePage}
+          user={user} onLogout={handleLogout} loggingOut={loggingOut} isMobile={isMobile} />
       )}
-
       <div style={s.mainContent}>
-        <Topbar
-          dark={dark}
-          toggleDark={() => setDark(d => !d)}
-          activePage={activePage}
-          user={user}
-          isMobile={isMobile}
-          sidebarOpen={sidebarOpen}
+        <Topbar dark={dark} toggleDark={() => setDark(d => !d)} activePage={activePage}
+          user={user} isMobile={isMobile} sidebarOpen={sidebarOpen}
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
-        />
-        <div style={s.pageContent}>
-          {renderPage()}
-        </div>
+          onLogout={handleLogout} loggingOut={loggingOut} />
+        <div style={s.pageContent}>{renderPage()}</div>
       </div>
-
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }

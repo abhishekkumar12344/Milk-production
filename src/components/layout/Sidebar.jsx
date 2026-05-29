@@ -19,7 +19,7 @@ export default function Sidebar({ dark, activePage, setActivePage, user, onLogou
           <div style={s.logoIcon}>🥛</div>
           {!isMobile && (
             <div>
-              <div style={s.logoText}>DairyFlow</div>
+              <div style={s.logoText}>RAJADairy</div>
               <div style={s.logoSub}>SMART DAIRY MGMT</div>
             </div>
           )}
