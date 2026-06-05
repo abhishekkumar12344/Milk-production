@@ -70,15 +70,27 @@ export default function DistributorsPage({ dark }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure? This action cannot be undone.")) return;
+  // Toggle distributor status between Active and Inactive
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+    const action = newStatus === "Active" ? "activate" : "deactivate";
+    
+    if (!confirm(`Are you sure you want to ${action} this distributor?`)) return;
     
     try {
-      await distributorAPI.delete(id);
-      setDistributors(prev => prev.filter(d => d._id !== id));
-      alert("✅ Distributor deleted successfully!");
+      await distributorAPI.update(id, { status: newStatus });
+      
+      setDistributors(prev => prev.map(d => 
+        d._id === id ? { ...d, status: newStatus } : d
+      ));
+      
+      if (selected && selected._id === id) {
+        setSelected({ ...selected, status: newStatus });
+      }
+      
+      alert(`✅ Distributor ${action}d successfully!`);
     } catch (err) {
-      alert("❌ Error deleting distributor: " + err.message);
+      alert(`❌ Error ${action}ing distributor: ` + err.message);
     }
   };
 
@@ -132,7 +144,16 @@ export default function DistributorsPage({ dark }) {
                       <td style={s.td} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button onClick={() => setSelected(d)} style={{ ...s.btn(COLORS.primary, true), padding: "4px 10px", fontSize: 11 }}>View</button>
-                          <button onClick={() => handleDelete(d._id)} style={{ ...s.btn(COLORS.danger, true), padding: "4px 10px", fontSize: 11 }}>Del</button>
+                          <button 
+                            onClick={() => handleToggleStatus(d._id, d.status)} 
+                            style={{ 
+                              ...s.btn(d.status === "Active" ? COLORS.warning : COLORS.accent, true), 
+                              padding: "4px 10px", 
+                              fontSize: 11 
+                            }}
+                          >
+                            {d.status === "Active" ? "Deactivate" : "Activate"}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -202,6 +223,14 @@ export default function DistributorsPage({ dark }) {
                   <div style={{ fontSize: 14, fontWeight: 600, marginTop: 3 }}>{v}</div>
                 </div>
               ))}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => handleToggleStatus(selected._id, selected.status)} 
+                style={s.btn(selected.status === "Active" ? COLORS.warning : COLORS.accent)}
+              >
+                {selected.status === "Active" ? "Deactivate Distributor" : "Activate Distributor"}
+              </button>
             </div>
           </div>
         )}
