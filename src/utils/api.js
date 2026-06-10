@@ -147,13 +147,16 @@ export const inventoryAPI = {
 };
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
+// Supports full address fields: addressLine1, addressLine2, landmark,
+// city, state, pincode (added alongside legacy `address` string).
 export const clientAPI = {
-  getAll:    (p = {}) => apiGet('/clients', p),
-  getById:   (id)     => apiGet(`/clients/${id}`),
-  getCredit: (id)     => apiGet(`/clients/${id}/credit`),
-  create:    (d)      => apiPost('/clients', d),
-  update:    (id, d)  => apiPatch(`/clients/${id}`, d),
-  delete:    (id)     => apiDelete(`/clients/${id}`),
+  getAll:         (p = {}) => apiGet('/clients', p),
+  getById:        (id)     => apiGet(`/clients/${id}`),
+  getCredit:      (id)     => apiGet(`/clients/${id}/credit`),
+  getStatement:   (id, p = {}) => apiGet(`/clients/${id}/statement`, p),
+  create:         (d)      => apiPost('/clients', d),
+  update:         (id, d)  => apiPatch(`/clients/${id}`, d),
+  delete:         (id)     => apiDelete(`/clients/${id}`),
 };
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
@@ -166,6 +169,10 @@ export const salesAPI = {
   markPaid:    (id, d)  => apiPatch(`/sales/${id}/pay`, d),
   delete:      (id)     => apiDelete(`/sales/${id}`),
   downloadInvoice: (id, ref) => downloadPDF(`/receipts/sale/${id}`, `invoice-${ref || id}.pdf`),
+
+  // ✅ NEW: Aggregated sales data for daily/weekly/monthly/yearly charts
+  getAggregated: ({ startDate, endDate, groupBy }) =>
+    apiGet('/sales/aggregated', { startDate, endDate, groupBy }),
 };
 
 // ─── Production ───────────────────────────────────────────────────────────────
@@ -196,15 +203,19 @@ export const reportsAPI = {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 export const notificationAPI = {
-  getAll: () => apiGet('/notifications'),
+  getAll:   () => apiGet('/notifications'),
+  markRead: (id)  => apiPatch(`/notifications/${id}/read`, {}),
+  markAllRead: () => apiPatch('/notifications/read-all', {}),
 };
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 export const settingsAPI = {
-  getBusinessSettings: () => apiGet('/settings/business'),
+  getBusinessSettings:    () => apiGet('/settings/business'),
   updateBusinessSettings: (d) => apiPatch('/settings/business', d),
-  updateProductionLevel: (d) => apiPatch('/settings/production-level', d),
-  getUserProfile: () => apiGet('/settings/profile'),
-  changePassword: (d) => apiPatch('/settings/change-password', d),
+  updateProductionLevel:  (d) => apiPatch('/settings/production-level', d),
+  getUserProfile:         () => apiGet('/settings/profile'),
+  changePassword:         (d) => apiPatch('/settings/change-password', d),
 };
+
 // Backward-compat exports
 export { getAuthToken, setAuthToken, clearAuthToken };
